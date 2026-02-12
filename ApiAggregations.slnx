@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="ApiAggregation.Api/ApiAggregation.Api.csproj" />
+  <Project Path="ApiAggregation.Application/ApiAggregation.Application.csproj" Id="ae2e7c2d-f95f-453e-938c-b74eeee0fee9" />
+  <Project Path="ApiAggregation.Domain/ApiAggregation.Domain.csproj" Id="0a19ce99-b20e-443e-a64c-b030001a9d81" />
+  <Project Path="ApiAggregation.Infrastructure/ApiAggregation.Infrastructure.csproj" Id="a7898592-3640-4e1c-a643-97fba99b912c" />
+  <Project Path="ApiAggregation.Shared/ApiAggregation.Shared.csproj" Id="cf606a81-a7ae-4ba2-ba81-e31ba800f8aa" />
+  <Project Path="ApiAggregation.Tests.Integration/ApiAggregation.Tests.Integration.csproj" Id="5fc11d82-5b80-4e4f-be93-a5373d9afb5b" />
+  <Project Path="ApiAggregation.Tests/ApiAggregation.Tests.csproj" Id="a009c550-0821-4ff8-ba96-12afda878211" />
+</Solution>
