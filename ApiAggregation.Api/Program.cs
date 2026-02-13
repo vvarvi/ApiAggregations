@@ -1,15 +1,21 @@
-using ApiAggregation.Application.Aggregation;
+﻿using ApiAggregation.Application.Aggregation;
 using ApiAggregation.Application.Aggregation.Interfaces;
+using ApiAggregation.Infrastructure.Caching;
 using ApiAggregation.Infrastructure.DependencyInjection;
+using ApiAggregation.Infrastructure.ExternalApis;
+using ApiAggregation.Infrastructure.ExternalApis.Abstractions;
 using ApiAggregation.Infrastructure.ExternalApis.GitHubApi;
 using ApiAggregation.Infrastructure.ExternalApis.NewsApi;
 using ApiAggregation.Infrastructure.ExternalApis.WeatherApi;
 using ApiAggregation.Infrastructure.Logging;
 using ApiAggregation.Infrastructure.Observability.Logging.Correlation;
-using Microsoft.OpenApi;
-using Prometheus;
 using ApiAggregation.Infrastructure.Performance;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using OpenTelemetry.Metrics;
+using Prometheus;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,13 +96,46 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddSingleton<IApiPerformanceTracker, InMemoryApiPerformanceTracker>();
 builder.Services.AddHostedService<PerformanceAnalyzerHostedService>();
+builder.Services.AddSingleton<ICacheTtlPolicy, ConfigurableCacheTtlPolicy>();
 
-builder.Services.AddOpenTelemetry() // Replace AddOpenTelemetryMetrics with AddOpenTelemetry
-    .WithMetrics(otelBuilder =>
+builder.Services.AddHttpClient<WeatherApiClient>();
+builder.Services.AddHttpClient<NewsApiClient>();
+builder.Services.AddHttpClient<GitHubApiClient>();
+
+builder.Services.AddScoped<IExternalApiClient, WeatherApiClient>();
+builder.Services.AddScoped<IExternalApiClient, NewsApiClient>();
+builder.Services.AddScoped<IExternalApiClient, GitHubApiClient>();
+
+builder.Services.Configure<ExternalApiOptions>(builder.Configuration.GetSection("ExternalApis"));
+
+var jwtSection = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSection["SecretKey"];
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        otelBuilder.AddMeter("ApiPerformanceMetrics");
-        otelBuilder.AddConsoleExporter();
+        options.RequireHttpsMetadata = false; // μόνο για development
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSection["Issuer"],
+            ValidAudience = jwtSection["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(secretKey))
+        };
     });
+
+//builder.Services.AddOpenTelemetry() // Replace AddOpenTelemetryMetrics with AddOpenTelemetry
+//    .WithMetrics(otelBuilder =>
+//    {
+//        otelBuilder.AddMeter("ApiPerformanceMetrics");
+//        otelBuilder.AddConsoleExporter();
+//    });
 
 var app = builder.Build();
 

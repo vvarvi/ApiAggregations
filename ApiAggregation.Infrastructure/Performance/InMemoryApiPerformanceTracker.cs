@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OpenTelemetry.Metrics;
+using System;
 using System.Collections.Concurrent;
 
 namespace ApiAggregation.Infrastructure.Performance
@@ -6,10 +7,25 @@ namespace ApiAggregation.Infrastructure.Performance
     public class InMemoryApiPerformanceTracker : IApiPerformanceTracker
     {
         private readonly ConcurrentDictionary<string, ConcurrentQueue<(DateTime Timestamp, double ResponseTime)>> _apiResponseTimes;
+        
+        private readonly ConcurrentBag<PerformanceMetric> _metrics = new();
 
         public InMemoryApiPerformanceTracker()
         {
             _apiResponseTimes = new ConcurrentDictionary<string, ConcurrentQueue<(DateTime, double)>>();
+        }
+        public void AddMetric(PerformanceMetric metric)
+        {
+            _metrics.Add(metric);
+        }
+
+        public IReadOnlyList<PerformanceMetric> GetMetrics(string source, TimeSpan window)
+        {
+            var cutoff = DateTime.UtcNow - window;
+
+            return _metrics
+                .Where(m => m.SourceName == source && m.Timestamp >= cutoff)
+                .ToList();
         }
 
         public void RecordResponseTime(string apiName, double responseTimeMs)

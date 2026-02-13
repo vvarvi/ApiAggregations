@@ -29,6 +29,25 @@ namespace ApiAggregation.Infrastructure.Performance
             _anomalyCounter = _meter.CreateCounter<long>("api_anomalies_total");
         }
 
+        public void Analyze(string source)
+        {
+            var baseline = _tracker.GetMetrics(source, TimeSpan.FromMinutes(30));
+            var recent = _tracker.GetMetrics(source, TimeSpan.FromMinutes(5));
+
+            if (!baseline.Any() || !recent.Any())
+                return;
+
+            var baselineAvg = baseline.Average(m => m.Duration.TotalMilliseconds);
+            var recentAvg = recent.Average(m => m.Duration.TotalMilliseconds);
+
+            if (recentAvg > baselineAvg * 1.5)
+            {
+                _logger.LogWarning(
+                    "PERFORMANCE ANOMALY: {Source} degraded. Baseline={Baseline}ms Recent={Recent}ms",
+                    source, baselineAvg, recentAvg);
+            }
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Performance Analyzer Hosted Service started.");
@@ -63,7 +82,7 @@ namespace ApiAggregation.Infrastructure.Performance
                 if (rollingAvg > 1.5 * overallAvg)
                 {
                     _logger.LogWarning(
-                        "🚨 Performance spike detected for {Api}. Rolling Avg: {RollingAvg:F2}ms",
+                        "Performance spike detected for {Api}. Rolling Avg: {RollingAvg:F2}ms",
                         api, rollingAvg);
 
                     //_anomalyCounter.Add((1, new("api_name", api));

@@ -13,9 +13,9 @@ namespace ApiAggregation.Infrastructure.Security.DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
         {
-            services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
+            services.Configure<JwtOptions>(configuration.GetSection("JwtSettings"));
 
-            var options = configuration.GetSection("Jwt").Get<JwtOptions>()!;
+            var options = configuration.GetSection("JwtSettings").Get<JwtOptions>()!;
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(opt =>

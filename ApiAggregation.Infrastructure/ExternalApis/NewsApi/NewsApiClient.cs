@@ -2,20 +2,29 @@
 using ApiAggregation.Infrastructure.ExternalApis.Abstractions;
 using ApiAggregation.Infrastructure.ExternalApis.GitHubApi;
 using ApiAggregation.Infrastructure.ExternalApis.NewsApi.Models;
+using ApiAggregation.Infrastructure.Performance;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace ApiAggregation.Infrastructure.ExternalApis.NewsApi
 {
     public class NewsApiClient : BaseExternalApiClient, IExternalApiClient
     {
-        private readonly ILogger<GitHubApiClient> _logger;
+        private readonly ILogger<NewsApiClient> _logger;
+
+        private readonly ApiConfig _config;
+
+        private readonly IApiPerformanceTracker _metrics;
 
         public override string SourceName => "NewsApi";
 
-        public NewsApiClient(HttpClient httpClient, ILogger<GitHubApiClient> logger) : base(httpClient, "NewsApi")
+        public NewsApiClient(HttpClient httpClient, IOptions<ExternalApiOptions> options, ILogger<NewsApiClient> logger, IApiPerformanceTracker metrics) : base(httpClient, "NewsApi", metrics)
         {
             _logger = logger;
+            _metrics = metrics;
+            _config = options.Value.News;
+            _httpClient.BaseAddress = new Uri(_config.BaseUrl);
         }
 
         public override async Task<IEnumerable<AggregatedItem>> FetchAsync(CancellationToken cancellationToken)
@@ -24,12 +33,12 @@ namespace ApiAggregation.Infrastructure.ExternalApis.NewsApi
             {
                 _logger.LogInformation("Calling News Articles API started...");
 
-                var response = await _httpClient.GetAsync("/news", cancellationToken);
+                var response = await _httpClient.GetAsync($"/v2/top-headlines?country=us&apiKey={_config.ApiKey}", cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                     return Enumerable.Empty<AggregatedItem>();
 
-                var json = await response.Content.ReadAsStringAsync();
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 var dto = JsonSerializer.Deserialize<NewsArticleResponseDTO>(json);
 

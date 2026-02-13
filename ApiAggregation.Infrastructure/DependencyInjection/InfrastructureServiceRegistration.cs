@@ -4,6 +4,7 @@ using ApiAggregation.Infrastructure.Logging;
 using ApiAggregation.Infrastructure.Logging.Interfaces;
 using ApiAggregation.Infrastructure.Observability.Logging;
 using ApiAggregation.Infrastructure.Observability.Tracing;
+using ApiAggregation.Infrastructure.Performance;
 using ApiAggregation.Infrastructure.Security.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,12 @@ namespace ApiAggregation.Infrastructure.DependencyInjection
             services.AddCorrelationLogging();
 
             services.AddJwtSecurity(configuration);
+
+            services.AddSingleton<IApiPerformanceTracker, InMemoryApiPerformanceTracker>();
+
+            services.AddSingleton<PerformanceAnalyzerHostedService>();
+
+            services.AddHostedService<PerformanceLoggingHostedService>();
 
             return services;
         }
